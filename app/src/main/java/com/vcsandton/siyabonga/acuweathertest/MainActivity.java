@@ -1,30 +1,25 @@
 package com.vcsandton.siyabonga.acuweathertest;
 
-import static com.vcsandton.siyabonga.acuweathertest.NetworkUtil.LOGGING_TAG;
-import static com.vcsandton.siyabonga.acuweathertest.NetworkUtil.METRIC_VALUE;
-import static com.vcsandton.siyabonga.acuweathertest.NetworkUtil.PARAM_API_KEY;
-import static com.vcsandton.siyabonga.acuweathertest.NetworkUtil.PARAM_METRIC;
-import static com.vcsandton.siyabonga.acuweathertest.NetworkUtil.WEATHERBASE_URL;
-
-import com.vcsandton.siyabonga.acuweathertest.NetworkUtil;
-
-
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.TextView;
 
-import java.net.URL;
 import com.vcsandton.siyabonga.acuweathertest.databinding.ActivityMainBinding;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+
 public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding binding;
+    private TextView tvweather;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,49 +27,44 @@ public class MainActivity extends AppCompatActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
+        tvweather = findViewById(R.id.tv_weather);
+
+        // Call the AsyncTask to fetch weather data
+        new FetchWeatherData().execute();
+    }
+
+    private class FetchWeatherData extends AsyncTask<Void, Void, String> {
+        @Override
+        protected String doInBackground(Void... voids) {
+            URL url = buildURLForWeather();
+            if (url != null) {
                 try {
-                    String weather = fetchDataFromWeatherAPI();
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            binding.tvWeather.setText(weather);
-                        }
-                    });
-                } catch (Exception e) {
+                    return NetworkUtil.getResponseFromHttpUrl(url);
+                } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
-        });
-        thread.start();
-    }
-
-    private String fetchDataFromWeatherAPI() throws IOException {
-        URL url = buildURLForWeather();
-        if (url == null) {
-            return "";
+            return null;
         }
 
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
+        @Override
+        protected void onPostExecute(String weatherData) {
+            if (weatherData != null) {
+                tvweather.setText(weatherData);
+            } else {
+                Log.e("MainActivity", "Weather data is null");
             }
-            return response.toString();
-        } finally {
-            connection.disconnect();
         }
     }
 
     private URL buildURLForWeather() {
+        final String WEATHERBASE_URL = "https://api.accuweather.com/data/1.0/currentconditions/v1/123456";
+        final String PARAM_API_KEY = "api_key";
+        final String PARAM_METRIC = "metric";
+
         Uri buildUri = Uri.parse(WEATHERBASE_URL).buildUpon()
-                .appendQueryParameter(PARAM_API_KEY, BuildConfig.ACCUWEATHER_API_KEY) // passing in api key
-                .appendQueryParameter(PARAM_METRIC, METRIC_VALUE) // passing in metric as measurement unit
+                .appendQueryParameter(PARAM_API_KEY, BuildConfig.ACCUWEATHER_API_KEY) // Replace with your API key
+                .appendQueryParameter(PARAM_METRIC, "true") // Set this to "true" if you want metric units
                 .build();
 
         URL url = null;
@@ -84,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        Log.i(LOGGING_TAG, "buildURLForWeather: " + url);
+        Log.i("MainActivity", "buildURLForWeather: " + url);
         return url;
     }
 }
