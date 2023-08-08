@@ -1,5 +1,7 @@
 package com.vcsandton.siyabonga.acuweathertest;
 
+import static com.vcsandton.siyabonga.acuweathertest.NetworkUtil.buildURLForWeather;
+
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.net.Uri;
@@ -27,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        tvweather = findViewById(R.id.tv_weather);
+        tvweather = binding.tvWeather; // Make sure the ID matches your layout
 
         // Call the AsyncTask to fetch weather data
         new FetchWeatherData().execute();
@@ -41,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     return NetworkUtil.getResponseFromHttpUrl(url);
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    Log.e("FetchWeatherData",  e.toString());
                 }
             }
             return null;
@@ -52,29 +54,25 @@ public class MainActivity extends AppCompatActivity {
             if (weatherData != null) {
                 tvweather.setText(weatherData);
             } else {
-                Log.e("MainActivity", "Weather data is null");
+                Log.e("FetchWeatherData", "Weather data is null");
             }
         }
     }
 
-    private URL buildURLForWeather() {
-        final String WEATHERBASE_URL = "https://api.accuweather.com/data/1.0/currentconditions/v1/123456";
-        final String PARAM_API_KEY = "api_key";
-        final String PARAM_METRIC = "metric";
 
-        Uri buildUri = Uri.parse(WEATHERBASE_URL).buildUpon()
-                .appendQueryParameter(PARAM_API_KEY, BuildConfig.ACCUWEATHER_API_KEY) // Replace with your API key
-                .appendQueryParameter(PARAM_METRIC, "true") // Set this to "true" if you want metric units
-                .build();
 
-        URL url = null;
-        try {
-            url = new URL(buildUri.toString());
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
 
-        Log.i("MainActivity", "buildURLForWeather: " + url);
-        return url;
+
+    private String readTextFromURL(URL url) throws IOException {
+        StringBuilder content = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                content.append(line);
+            }
+        }catch (IOException e){Log.w("myApp", e.toString());;}
+        return content.toString();
     }
+
+
 }
